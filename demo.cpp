@@ -5,10 +5,10 @@
 #include "Eigen/Core"
 #include <iostream>
 
-#define x 17
-#define y 2500
-#define TOL 1e-13
+#define ROWS 2500
+#define COLS 17
 #define RCOND 1e-15
+#define TOL 1e-13
 
 void assert_true(bool cond, const char* const msg) {
     if(!cond) {
@@ -58,14 +58,14 @@ BDCSVD_Mem bd;
 void init_bdcsvd_mem() {
     //for BDCSVD
     bd.input = Eigen::Matrix< double, Eigen::Dynamic, Eigen::Dynamic >::Zero(
-        y, x);
+        ROWS, COLS);
     bd.output = Eigen::Matrix< double, Eigen::Dynamic, Eigen::Dynamic >::Zero(
-        x, y);
+        COLS, ROWS);
     bd.copy = Eigen::Matrix< double, Eigen::Dynamic, Eigen::Dynamic,
                              Eigen::ColMajor >::Zero(bd.input.rows(),
                                                      bd.input.cols());
     bd.bdg = new Eigen::internal::BandMatrix< double, -1, -1, 1, 0, 1 >(
-        x, x);
+        COLS, COLS);
     bd.hh = Eigen::Matrix< double, Eigen::Dynamic, Eigen::Dynamic,
                            Eigen::ColMajor >::Zero(bd.input.rows(),
                                                    bd.input.cols());
@@ -146,7 +146,7 @@ void init_bdcsvd_mem() {
  * memory.cpp, where bd is initialized. Any smaller problem size is also
  * allowed, given that the input is zeroed out otherwise.
  */
-int PINV() {
+void PINV() {
     //bidiagonal stuff...
     Eigen::internal::UpperBidiagonalization< Eigen::Matrix<
         double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor > >
@@ -158,9 +158,9 @@ int PINV() {
                         &bd.UofSVD, &bd.VofSVD, &bd.workspace,
                         &bd.q1, &bd.ess_temp);
 
-    Eigen::Matrix< double, 17, 1 > sigma = bd.svd->singularValues();
+    Eigen::Matrix< double, COLS, 1 > sigma = bd.svd->singularValues();
     double trunc = sigma(0, 0) * RCOND;
-    Eigen::Matrix< bool, 17, 1 > sig_mask = sigma.array() > trunc;
+    Eigen::Matrix< bool, COLS, 1 > sig_mask = sigma.array() > trunc;
 
     /*
      * Select says compute the inverse of Sigma, except where mask is falsy,
@@ -171,8 +171,6 @@ int PINV() {
     bd.sigma_svd.noalias() = bd.svd->matrixV();
     bd.b.noalias() = bd.sigma_svd * bd.sigma_inv;
     bd.output.noalias() = bd.b * bd.svd->matrixU().adjoint();
-
-    return 0;
 }
 
 void test_simple() {
@@ -202,5 +200,6 @@ void test_simple() {
     init_bdcsvd_mem();
     Eigen::internal::set_is_malloc_allowed(false);
 
+    std::cout << "test_simple" << std::endl;
     test_simple();
 }
