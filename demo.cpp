@@ -1,4 +1,4 @@
-#define EIGEN_DEFAULT_ROW_MAJOR
+#define EIGEN_DEFAULT_TO_ROW_MAJOR
 #define EIGEN_RUNTIME_NO_MALLOC
 
 #include "Eigen/Dense"
@@ -7,6 +7,14 @@
 
 #define x 17
 #define y 2500
+#define TOL 1e-13
+#define RCOND 1e-15
+
+void assert_true(bool cond, const char* const msg) {
+    if(!cond) {
+        std::cout << msg << std::endl;
+    }
+}
 
 struct BDCSVD_Mem {
     Eigen::Matrix< double, Eigen::Dynamic, Eigen::Dynamic > input;
@@ -107,67 +115,92 @@ void init_bdcsvd_mem() {
  * for setting input and getting output matrices via Memory.
  *
  * Python equivalent:
- * mem.bd.output = np.linalg.pinv(mem.bd.input)
+ * bd.output = np.linalg.pinv(bd.input)
  *
  * ----------
  * USAGE
  * ----------
  * //Check sizes are within buffer sizes
- * ASSERT(input_matrix.rows() <= mem.bd.input.rows());
- * ASSERT(input_matrix.cols() <= mem.bd.input.cols());
- * ASSERT(output_matrix.rows() <= mem.bd.output.rows());
- * ASSERT(output_matrix.cols() <= mem.bd.output.cols());
+ * ASSERT(input_matrix.rows() <= bd.input.rows());
+ * ASSERT(input_matrix.cols() <= bd.input.cols());
+ * ASSERT(output_matrix.rows() <= bd.output.rows());
+ * ASSERT(output_matrix.cols() <= bd.output.cols());
  *
  * //Set up input
- * mem.bd.input.setZero(); //To allow smaller problem sizes to be computed accurately
- * mem.bd.input.block(0, 0, input_matrix.rows(), input_matrix.cols()) =
+ * bd.input.setZero(); //To allow smaller problem sizes to be computed accurately
+ * bd.input.block(0, 0, input_matrix.rows(), input_matrix.cols()) =
  *  input_matrix;
  *
  * int32 ret_val = PINV();
  *
  * //Copy out output
  * output_matrix =
- *  mem.bd.output.block(0, 0, output_matrix.rows(), output_matrix.cols());
+ *  bd.output.block(0, 0, output_matrix.rows(), output_matrix.cols());
  *
  * ----------
  * NOTE
  * ----------
- * mem.bd.output and mem.bd.input are the only in and out buffers for PINV. This
+ * bd.output and bd.input are the only in and out buffers for PINV. This
  * allows the functions calling them to not need maximum output buffers every time.
  * The maximum input problem size is currently 2500x17; this can be adjusted inside
- * memory.cpp, where mem.bd is initialized. Any smaller problem size is also
+ * memory.cpp, where bd is initialized. Any smaller problem size is also
  * allowed, given that the input is zeroed out otherwise.
  */
-
- int main() {
-     bd.input.setZero();
- }
-int32 PINV() {
+int PINV() {
     //bidiagonal stuff...
     Eigen::internal::UpperBidiagonalization< Eigen::Matrix<
-        double64, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor > >
-        bid(mem.bd.copy, &mem.bd.hh, mem.bd.bdg, &mem.bd.col_temp,
-            &mem.bd.ess_temp);
+        double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor > >
+        bid(bd.copy, &bd.hh, bd.bdg, &bd.col_temp,
+            &bd.ess_temp);
 
-    mem.bd.svd->compute(mem.bd.input, &mem.bd.copy, &bid, &mem.bd.bid_dense,
-                        mem.bd.jacobi, &mem.bd.jacobi_temp, &mem.bd.singVals,
-                        &mem.bd.UofSVD, &mem.bd.VofSVD, &mem.bd.workspace,
-                        &mem.bd.q1, &mem.bd.ess_temp);
+    bd.svd->compute(bd.input, &bd.copy, &bid, &bd.bid_dense,
+                        bd.jacobi, &bd.jacobi_temp, &bd.singVals,
+                        &bd.UofSVD, &bd.VofSVD, &bd.workspace,
+                        &bd.q1, &bd.ess_temp);
 
-    Eigen::Matrix< double64, 17, 1 > sigma = mem.bd.svd->singularValues();
-    double64 trunc = sigma(0, 0) * RCOND;
+    Eigen::Matrix< double, 17, 1 > sigma = bd.svd->singularValues();
+    double trunc = sigma(0, 0) * RCOND;
     Eigen::Matrix< bool, 17, 1 > sig_mask = sigma.array() > trunc;
 
     /*
      * Select says compute the inverse of Sigma, except where mask is falsy,
      * and for those indices use zero.
      */
-    mem.bd.sigma_inv =
+    bd.sigma_inv =
         sig_mask.select(sigma.array().inverse(), 0).matrix().asDiagonal();
-    mem.bd.sigma_svd.noalias() = mem.bd.svd->matrixV();
-    mem.bd.b.noalias() = mem.bd.sigma_svd * mem.bd.sigma_inv;
-    mem.bd.output.noalias() = mem.bd.b * mem.bd.svd->matrixU().adjoint();
+    bd.sigma_svd.noalias() = bd.svd->matrixV();
+    bd.b.noalias() = bd.sigma_svd * bd.sigma_inv;
+    bd.output.noalias() = bd.b * bd.svd->matrixU().adjoint();
 
-    m_error_code = NO_ERROR;
     return 0;
+}
+
+void test_simple() {
+
+    Eigen::internal::set_is_malloc_allowed(true);
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> input =
+        Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>::Zero(2, 2);
+    input << 3, 3.2, 3.5, 3.6;
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> output =
+        Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>::Zero(input.cols(), input.rows());
+    Eigen::internal::set_is_malloc_allowed(false);
+
+    bd.input.setZero();
+    bd.input.block(0, 0, 2, 2) = input;
+
+    PINV();
+
+    output = bd.output.block(0, 0, output.rows(), output.cols());
+
+    Eigen::internal::set_is_malloc_allowed(true);
+    assert_true(((input * output - Eigen::MatrixXd::Identity(input.rows(), output.cols())).array().abs() < TOL).all(), "Bad pseudoinverse");
+    Eigen::internal::set_is_malloc_allowed(false);
+}
+
+ int main() {
+    Eigen::internal::set_is_malloc_allowed(true);
+    init_bdcsvd_mem();
+    Eigen::internal::set_is_malloc_allowed(false);
+
+    test_simple();
 }

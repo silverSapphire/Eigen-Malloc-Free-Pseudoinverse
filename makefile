@@ -1,2 +1,2 @@
 run:
-	g++ -o demo demo.cpp
+	g++ -o demo demo.cpp && ./demo
