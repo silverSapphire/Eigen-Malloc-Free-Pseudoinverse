@@ -142,3 +142,32 @@ void init_bdcsvd_mem() {
  int main() {
      bd.input.setZero();
  }
+int32 PINV() {
+    //bidiagonal stuff...
+    Eigen::internal::UpperBidiagonalization< Eigen::Matrix<
+        double64, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor > >
+        bid(mem.bd.copy, &mem.bd.hh, mem.bd.bdg, &mem.bd.col_temp,
+            &mem.bd.ess_temp);
+
+    mem.bd.svd->compute(mem.bd.input, &mem.bd.copy, &bid, &mem.bd.bid_dense,
+                        mem.bd.jacobi, &mem.bd.jacobi_temp, &mem.bd.singVals,
+                        &mem.bd.UofSVD, &mem.bd.VofSVD, &mem.bd.workspace,
+                        &mem.bd.q1, &mem.bd.ess_temp);
+
+    Eigen::Matrix< double64, 17, 1 > sigma = mem.bd.svd->singularValues();
+    double64 trunc = sigma(0, 0) * RCOND;
+    Eigen::Matrix< bool, 17, 1 > sig_mask = sigma.array() > trunc;
+
+    /*
+     * Select says compute the inverse of Sigma, except where mask is falsy,
+     * and for those indices use zero.
+     */
+    mem.bd.sigma_inv =
+        sig_mask.select(sigma.array().inverse(), 0).matrix().asDiagonal();
+    mem.bd.sigma_svd.noalias() = mem.bd.svd->matrixV();
+    mem.bd.b.noalias() = mem.bd.sigma_svd * mem.bd.sigma_inv;
+    mem.bd.output.noalias() = mem.bd.b * mem.bd.svd->matrixU().adjoint();
+
+    m_error_code = NO_ERROR;
+    return 0;
+}
