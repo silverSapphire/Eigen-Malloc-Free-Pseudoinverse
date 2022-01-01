@@ -67,7 +67,6 @@ void MatrixBase<Derived>::makeHouseholder(
   Scalar& tau,
   RealScalar& beta) const
 {
-
   using std::sqrt;
   using numext::conj;
   
@@ -75,7 +74,6 @@ void MatrixBase<Derived>::makeHouseholder(
   VectorBlock<const Derived, EssentialPart::SizeAtCompileTime> tail(derived(), 1, size()-1);
   
   RealScalar tailSqNorm = size()==1 ? RealScalar(0) : tail.squaredNorm();
-
   Scalar c0 = coeff(0);
   const RealScalar tol = (std::numeric_limits<RealScalar>::min)();
 
@@ -92,32 +90,6 @@ void MatrixBase<Derived>::makeHouseholder(
       beta = -beta;
     essential = tail / (c0 - beta);
     tau = conj((beta - c0) / beta);
-  }
-
-}
-
-template<typename Derived>
-template<typename EssentialPart>
-void MatrixBase<Derived>::applyHouseholderOnTheLeft(
-  const EssentialPart& essential,
-  const Scalar& tau,
-  Scalar* workspace)
-{
-
-  if(rows() == 1)
-  {
-    *this *= Scalar(1)-tau;
-  }
-  else if(tau!=Scalar(0))
-  {
-    Map<typename internal::plain_row_type<PlainObject>::type> tmp(workspace,cols());
-    Block<Derived, EssentialPart::SizeAtCompileTime, Derived::ColsAtCompileTime> bottom(derived(), 1, 0, rows()-1, cols());
-
-    tmp.noalias() = essential.adjoint() * bottom;
-
-    tmp += this->row(0);
-    this->row(0) -= tau * tmp;
-    bottom.noalias() -= tau * essential * tmp;
   }
 }
 
@@ -137,12 +109,11 @@ void MatrixBase<Derived>::applyHouseholderOnTheLeft(
   *     MatrixBase::applyHouseholderOnTheRight()
   */
 template<typename Derived>
-template<typename EssentialPart, typename Temp>
+template<typename EssentialPart>
 void MatrixBase<Derived>::applyHouseholderOnTheLeft(
   const EssentialPart& essential,
   const Scalar& tau,
-  Scalar* workspace,
-  Temp* ess_temp)
+  Scalar* workspace)
 {
   if(rows() == 1)
   {
@@ -153,21 +124,10 @@ void MatrixBase<Derived>::applyHouseholderOnTheLeft(
     Map<typename internal::plain_row_type<PlainObject>::type> tmp(workspace,cols());
     Block<Derived, EssentialPart::SizeAtCompileTime, Derived::ColsAtCompileTime> bottom(derived(), 1, 0, rows()-1, cols());
     tmp.noalias() = essential.adjoint() * bottom;
-
     tmp += this->row(0);
     this->row(0) -= tau * tmp;
-    //Take an appropriately sized chunk out of the temp space
-    Eigen::Map< Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> > aref
-        (ess_temp->data(), essential.rows(), essential.cols());
-    for(int i = 0; i < essential.rows(); i++) {
-        for(int j = 0; j < essential.cols(); j++) {
-            aref(i, j) = essential(i, j) * tau;
-        }
-    }
-
-    bottom.noalias() -= aref * tmp;
+    bottom.noalias() -= tau * essential * tmp;
   }
-
 }
 
 /** Apply the elementary reflector H given by
@@ -202,9 +162,8 @@ void MatrixBase<Derived>::applyHouseholderOnTheRight(
     Block<Derived, Derived::RowsAtCompileTime, EssentialPart::SizeAtCompileTime> right(derived(), 0, 1, rows(), cols()-1);
     tmp.noalias() = right * essential.conjugate();
     tmp += this->col(0);
-    tmp.noalias() = tau * tmp;
-    this->col(0) -= tmp;
-    right.noalias() -= tmp * essential.transpose();
+    this->col(0) -= tau * tmp;
+    right.noalias() -= tau * tmp * essential.transpose();
   }
 }
 

@@ -167,13 +167,13 @@ public:
     else if (svd.m_computeThinU) m_workspace.resize(svd.cols());
   }
 
-  bool run(JacobiSVD<MatrixType, ColPivHouseholderQRPreconditioner>& svd, const MatrixType& matrix, MatrixType* temp)
+  bool run(JacobiSVD<MatrixType, ColPivHouseholderQRPreconditioner>& svd, const MatrixType& matrix)
   {
     if(matrix.rows() > matrix.cols())
     {
-      m_qr.compute(matrix, temp);
+      m_qr.compute(matrix);
       svd.m_workMatrix = m_qr.matrixQR().block(0,0,matrix.cols(),matrix.cols()).template triangularView<Upper>();
-      if(svd.m_computeFullU) m_qr.householderQ().evalTo(svd.m_matrixU, m_workspace, temp);
+      if(svd.m_computeFullU) m_qr.householderQ().evalTo(svd.m_matrixU, m_workspace);
       else if(svd.m_computeThinU)
       {
         svd.m_matrixU.setIdentity(matrix.rows(), matrix.cols());
@@ -533,11 +533,6 @@ template<typename _MatrixType, int QRPreconditioner> class JacobiSVD
       allocate(rows, cols, computationOptions);
     }
 
-    JacobiSVD(Index rows, Index cols, MatrixType* temp, unsigned int computationOptions = 0)
-    {
-      m_temp = temp;
-      allocate(rows, cols, computationOptions);
-    }
     /** \brief Constructor performing the decomposition of given matrix.
      *
      * \param matrix the matrix to decompose
@@ -603,8 +598,6 @@ template<typename _MatrixType, int QRPreconditioner> class JacobiSVD
     using Base::m_diagSize;
     using Base::m_prescribedThreshold;
     WorkMatrixType m_workMatrix;
-
-    MatrixType* m_temp;
 
     template<typename __MatrixType, int _QRPreconditioner, bool _IsComplex>
     friend struct internal::svd_precondition_2x2_block_to_be_real;
@@ -689,7 +682,7 @@ JacobiSVD<MatrixType, QRPreconditioner>::compute(const MatrixType& matrix, unsig
   {
     m_scaledMatrix = matrix / scale;
     m_qr_precond_morecols.run(*this, m_scaledMatrix);
-    m_qr_precond_morerows.run(*this, m_scaledMatrix, m_temp);
+    m_qr_precond_morerows.run(*this, m_scaledMatrix);
   }
   else
   {

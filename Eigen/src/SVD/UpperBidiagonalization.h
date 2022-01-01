@@ -60,46 +60,30 @@ template<typename _MatrixType> class UpperBidiagonalization
     {
       compute(matrix);
     }
-
-     explicit UpperBidiagonalization(const MatrixType& matrix, MatrixType* hh,
-             BidiagonalType* bidiag, ColVectorType* col_temp, MatrixType* ess_temp)
-     :
-        m_col_temp(col_temp),
-        m_ess_temp(ess_temp),
-        m_householder(hh),
-        m_bidiagonal(bidiag),
-        m_isInitialized(false)
-    {
-      computeUnblocked(matrix, col_temp);
-    }
     
-   
     UpperBidiagonalization& compute(const MatrixType& matrix);
-    UpperBidiagonalization& computeUnblocked(const MatrixType& matrix, ColVectorType* temp);
+    UpperBidiagonalization& computeUnblocked(const MatrixType& matrix);
     
-    const MatrixType& householder() const { return (MatrixType const&)*m_householder; }
-    const BidiagonalType& bidiagonal() const { 
-        return (BidiagonalType const&)*m_bidiagonal; }
+    const MatrixType& householder() const { return m_householder; }
+    const BidiagonalType& bidiagonal() const { return m_bidiagonal; }
     
     const HouseholderUSequenceType householderU() const
     {
       eigen_assert(m_isInitialized && "UpperBidiagonalization is not initialized.");
-      return HouseholderUSequenceType(*m_householder, m_householder->const_derived().diagonal().conjugate());
+      return HouseholderUSequenceType(m_householder, m_householder.diagonal().conjugate());
     }
 
-    const HouseholderVSequenceType householderV() const // const here gives nasty errors and i'm lazy
+    const HouseholderVSequenceType householderV() // const here gives nasty errors and i'm lazy
     {
       eigen_assert(m_isInitialized && "UpperBidiagonalization is not initialized.");
-      return HouseholderVSequenceType(m_householder->conjugate(), 
-              m_householder->const_derived().template diagonal<1>()) .setLength(m_householder->cols()-1)
+      return HouseholderVSequenceType(m_householder.conjugate(), m_householder.const_derived().template diagonal<1>())
+             .setLength(m_householder.cols()-1)
              .setShift(1);
     }
     
-    ColVectorType* m_col_temp;
-    protected:
-    MatrixType* m_ess_temp;
-    MatrixType* m_householder;
-    BidiagonalType* m_bidiagonal;
+  protected:
+    MatrixType m_householder;
+    BidiagonalType m_bidiagonal;
     bool m_isInitialized;
 };
 
@@ -109,38 +93,42 @@ template<typename MatrixType>
 void upperbidiagonalization_inplace_unblocked(MatrixType& mat,
                                               typename MatrixType::RealScalar *diagonal,
                                               typename MatrixType::RealScalar *upper_diagonal,
-                                              MatrixType* ess_temp,
                                               typename MatrixType::Scalar* tempData = 0)
 {
+  typedef typename MatrixType::Scalar Scalar;
 
   Index rows = mat.rows();
   Index cols = mat.cols();
 
+  typedef Matrix<Scalar,Dynamic,1,ColMajor,MatrixType::MaxRowsAtCompileTime,1> TempType;
+  TempType tempVector;
+  if(tempData==0)
+  {
+    tempVector.resize(rows);
+    tempData = tempVector.data();
+  }
+
   for (Index k = 0; /* breaks at k==cols-1 below */ ; ++k)
   {
-
     Index remainingRows = rows - k;
     Index remainingCols = cols - k - 1;
 
     // construct left householder transform in-place in A
     mat.col(k).tail(remainingRows)
        .makeHouseholderInPlace(mat.coeffRef(k,k), diagonal[k]);
-
     // apply householder transform to remaining part of A on the left
     mat.bottomRightCorner(remainingRows, remainingCols)
-       .applyHouseholderOnTheLeft(mat.col(k).tail(remainingRows-1), mat.coeff(k,k), tempData, ess_temp);
+       .applyHouseholderOnTheLeft(mat.col(k).tail(remainingRows-1), mat.coeff(k,k), tempData);
 
     if(k == cols-1) break;
 
     // construct right householder transform in-place in mat
     mat.row(k).tail(remainingCols)
        .makeHouseholderInPlace(mat.coeffRef(k,k+1), upper_diagonal[k]);
-
     // apply householder transform to remaining part of mat on the left
     mat.bottomRightCorner(remainingRows-1, remainingCols)
        .applyHouseholderOnTheRight(mat.row(k).tail(remainingCols-1).transpose(), mat.coeff(k,k+1), tempData);
   }
-
 }
 
 /** \internal
@@ -368,7 +356,7 @@ void upperbidiagonalization_inplace_blocked(MatrixType& A, BidiagType& bidiagona
 }
 
 template<typename _MatrixType>
-UpperBidiagonalization<_MatrixType>& UpperBidiagonalization<_MatrixType>::computeUnblocked(const _MatrixType& matrix, ColVectorType* temp)
+UpperBidiagonalization<_MatrixType>& UpperBidiagonalization<_MatrixType>::computeUnblocked(const _MatrixType& matrix)
 {
   Index rows = matrix.rows();
   Index cols = matrix.cols();
@@ -376,17 +364,14 @@ UpperBidiagonalization<_MatrixType>& UpperBidiagonalization<_MatrixType>::comput
 
   eigen_assert(rows >= cols && "UpperBidiagonalization is only for Arices satisfying rows>=cols.");
 
-  for(int i = 0; i < m_householder->rows(); i++) {
-      for(int j = 0; j < m_householder->cols(); j++) {
-          (*m_householder)(i, j) = matrix(i, j);
-      }
-  }
+  m_householder = matrix;
 
-  upperbidiagonalization_inplace_unblocked(*m_householder,
-                                           &(m_bidiagonal->template diagonal<0>().coeffRef(0)),
-                                           &(m_bidiagonal->template diagonal<1>().coeffRef(0)),
-                                           m_ess_temp,
-                                           temp->data());
+  ColVectorType temp(rows);
+
+  upperbidiagonalization_inplace_unblocked(m_householder,
+                                           &(m_bidiagonal.template diagonal<0>().coeffRef(0)),
+                                           &(m_bidiagonal.template diagonal<1>().coeffRef(0)),
+                                           temp.data());
 
   m_isInitialized = true;
   return *this;
