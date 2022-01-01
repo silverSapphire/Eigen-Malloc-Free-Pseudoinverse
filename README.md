@@ -41,4 +41,4 @@ Tests and more example usages can be found in [demo.cpp](demo.cpp).
 Eigen developer-specific [preprocessor directives](https://eigen.tuxfamily.org/dox/classEigen_1_1BDCSVD.html) are used to ensure that Eigen performs no heap allocation during execution, specifically EIGEN_RUNTIME_NO_MALLOC.
 
 ### Licensing
-This open-source code is forked from [Eigen 3.3.7](https://gitlab.com/libeigen/eigen/-/releases/3.3.7). For the Eigen MPL2 and other licensing information, see the [Eigen directory.](Eigen)
+This open-source code is forked from [Eigen 3.3.7](https://gitlab.com/libeigen/eigen/-/releases/3.3.7). For the Eigen MPL2 and other licensing information, see [here](https://eigen.tuxfamily.org/index.php?title=Main_Page#License).

@@ -7,6 +7,6 @@ demo: demo.o PINV.o
 
 # Compilation
 demo.o: demo.cpp
-	g++ -c demo.cpp
+	g++ -c -g demo.cpp
 PINV.o: PINV.h PINV.cpp
-	g++ -c PINV.cpp
+	g++ -c -g PINV.cpp

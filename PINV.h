@@ -9,7 +9,6 @@
 #define ROWS 2500
 #define COLS 17
 #define RCOND 1e-15
-#define TOL 1e-13
 
 class PINV {
 
