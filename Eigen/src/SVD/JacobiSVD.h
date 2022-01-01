@@ -533,7 +533,6 @@ template<typename _MatrixType, int QRPreconditioner> class JacobiSVD
       allocate(rows, cols, computationOptions);
     }
 
-    //WFSC
     JacobiSVD(Index rows, Index cols, MatrixType* temp, unsigned int computationOptions = 0)
     {
       m_temp = temp;

@@ -1,15 +1,15 @@
 # Malloc-Free Pseudoinverse Solver with Eigen C++ Template Library
-This extended Eigen C++ template library provides a malloc-free pseudoinverse solver. 
+This extended Eigen C++ template library and wrapper provides a malloc-free pseudoinverse solver. 
 
-Standard Eigen pseudoinverse functions, even those with memory preallocation variants, perform heap allocation during execution. This runtime allocation is undesirable in certain cases, specifically in embedded systems [[1]](#Links). The BDCSVD class [[4]](#Links) has been extended to allow for up-front allocation of all used memory, with an ensuing malloc-free execution of the decomposition.
+Standard Eigen pseudoinverse functions, even those with memory preallocation variants, perform heap allocation during execution. This runtime allocation is undesirable in certain cases, particularly in [embedded systems](https://en.wikipedia.org/wiki/The_Power_of_10:_Rules_for_Developing_Safety-Critical_Code). The [BDCSVD class](https://eigen.tuxfamily.org/dox/classEigen_1_1BDCSVD.html) has been extended to allow for up-front allocation of all used memory, with an ensuing malloc-free execution of the decomposition.
 
 ## Installation
-- The modified Eigen directory can be used or installed exactly as the original Eigen: simply include the headers in your project, and you are good to go! No make required. See [[2]](#Links) for the Eigen documentation.
+- The modified Eigen directory can be used or installed exactly as the original Eigen: simply include the headers in your project, and you are good to go! No make required. See [here](https://eigen.tuxfamily.org/dox/GettingStarted.html) for the original Eigen documentation.
 
 - Example wrapper code around the new Eigen functionality is located in PINV. This can be used as-is, requiring compilation and linking of PINV, or can be copied and pasted into your project as appropriate.
 
 ### Note
-The Eigen modifications allow for BDCSVD to calculate the relevant pieces of a pseudoinverse computation without heap allocation. PINV provides code that takes these pieces and manipulates them to find the actual pseudoinverse, also without heap allocation.
+The Eigen modifications allow for BDCSVD to calculate the relevant pieces of a pseudoinverse computation without heap allocation. PINV provides code that takes these pieces and uses them to find the actual pseudoinverse, also without heap allocation.
 
 ## Usage
 ```
@@ -33,15 +33,12 @@ int main() {
 ```
 
 ## Constraints
-The pseudoinverse solver is currently limited to problem sizes of 2500x17 or less. It is not currently templated and is restricted to doubles. Row major is used.
+The malloc-free pseudoinverse solver is currently limited to problem sizes of 2500x17 or less. It is not currently templated and is restricted to doubles. Row major is used.
 
 ## Tests
+Tests and more example usages can be found in [demo.cpp](demo.cpp). 
+
+Eigen developer-specific [preprocessor directives](https://eigen.tuxfamily.org/dox/classEigen_1_1BDCSVD.html) are used to ensure that Eigen performs no heap allocation during execution, specifically EIGEN_RUNTIME_NO_MALLOC.
 
 ### Licensing
-This open-source code is forked from Eigen 3.3.7: https://gitlab.com/libeigen/eigen/-/releases/3.3.7. For the Eigen MPL2 and other licensing information, see the Eigen directory.
-
-### Links
-1. https://en.wikipedia.org/wiki/The_Power_of_10:_Rules_for_Developing_Safety-Critical_Code
-2. https://eigen.tuxfamily.org/dox/GettingStarted.html
-3. https://eigen.tuxfamily.org/dox/TopicPreprocessorDirectives.html
-4. https://eigen.tuxfamily.org/dox/classEigen_1_1BDCSVD.html
+This open-source code is forked from [Eigen 3.3.7](https://gitlab.com/libeigen/eigen/-/releases/3.3.7). For the Eigen MPL2 and other licensing information, see the [Eigen directory.](Eigen)

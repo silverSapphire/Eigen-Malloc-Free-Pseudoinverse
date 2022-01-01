@@ -61,7 +61,6 @@ template<typename _MatrixType> class UpperBidiagonalization
       compute(matrix);
     }
 
-    //WFSC
      explicit UpperBidiagonalization(const MatrixType& matrix, MatrixType* hh,
              BidiagonalType* bidiag, ColVectorType* col_temp, MatrixType* ess_temp)
      :
