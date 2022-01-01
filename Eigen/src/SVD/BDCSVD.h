@@ -166,7 +166,6 @@ public:
         MatrixXr* ess_emp,
         unsigned int computationOptions);
 
-  //WFSC
   BDCSVD& compute(const MatrixType& matrix, 
           MatrixX* copy,
           internal::UpperBidiagonalization<MatrixX>* bid,
@@ -339,7 +338,6 @@ BDCSVD<MatrixType>& BDCSVD<MatrixType>::compute(const MatrixType& matrix, unsign
   return *this;
 }// end compute
 
-//WFSC updated function
 template<typename MatrixType>
 BDCSVD<MatrixType>& BDCSVD<MatrixType>::compute(const MatrixType& matrix, 
         MatrixX* copy,
@@ -567,7 +565,7 @@ void BDCSVD<MatrixType>::divide (Index firstCol, Index lastCol, Index firstRowW,
   /*
   if (m_compU)
   {
-      //WFSC commenting these out and putting these directly in expressions
+      //commenting these out and putting these directly in expressions
     //l = m_naiveU.row(firstCol + k).segment(firstCol, k);
     //f = m_naiveU.row(firstCol + k + 1).segment(firstCol + k + 1, n - k - 1);
   } 
