@@ -96,7 +96,7 @@ public:
 
     private:
 
-    void init_bdcsvd_mem();
+    void _init_bdcsvd_mem();
 };
 
 #endif

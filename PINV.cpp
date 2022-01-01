@@ -2,10 +2,10 @@
 #include <iostream>
 
 PINV::PINV(){
-    init_bdcsvd_mem();
+    _init_bdcsvd_mem();
 }
 
-void PINV::init_bdcsvd_mem() {
+void PINV::_init_bdcsvd_mem() {
     //for BDCSVD
     bd.input = Eigen::Matrix< double, Eigen::Dynamic, Eigen::Dynamic >::Zero(
         ROWS, COLS);
@@ -77,7 +77,7 @@ void PINV::calculate_PINV() {
     Eigen::Matrix< bool, COLS, 1 > sig_mask = sigma.array() > trunc;
 
     /*
-     * Select says compute the inverse of Sigma, except where mask is falsy,
+     * Select says compute the inverse of Sigma, except where mask is false,
      * and for those indices use zero.
      */
     bd.sigma_inv =

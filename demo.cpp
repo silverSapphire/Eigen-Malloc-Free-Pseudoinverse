@@ -25,7 +25,7 @@ void test_simple() {
     Eigen::internal::set_is_malloc_allowed(false);
 
     p->bd.input.setZero();
-    p->bd.input.block(0, 0, 2, 2) = input;
+    p->bd.input.block(0, 0, input.rows(), input.cols()) = input;
 
     p->calculate_PINV();
 

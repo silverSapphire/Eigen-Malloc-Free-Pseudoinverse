@@ -1,17 +1,41 @@
-# Malloc-Free Pseudoinverse Solver in Eigen C++ Template Library
+# Malloc-Free Pseudoinverse Solver with Eigen C++ Template Library
 This extended Eigen C++ template library provides a malloc-free pseudoinverse solver. 
 
-Standard Eigen pseudoinverse functions, even those with memory preallocation variants, perform heap allocation during execution. This runtime allocation is undesirable in certain cases, specifically in embedded systems [[1]](#Links). The BDCSVD class [[4]](#Links) has been extended to allow for up-front allocation of all used memory, with an ensuing malloc-free execution of the pseudoinverse solver.
+Standard Eigen pseudoinverse functions, even those with memory preallocation variants, perform heap allocation during execution. This runtime allocation is undesirable in certain cases, specifically in embedded systems [[1]](#Links). The BDCSVD class [[4]](#Links) has been extended to allow for up-front allocation of all used memory, with an ensuing malloc-free execution of the decomposition.
 
 ## Installation
-The Eigen directory can be used or installed exactly as the original Eigen: simply include the headers in your project, and you are good to go! No make required. See [[2]](#Links) for the Eigen documentation.
+- The modified Eigen directory can be used or installed exactly as the original Eigen: simply include the headers in your project, and you are good to go! No make required. See [[2]](#Links) for the Eigen documentation.
+
+- Example wrapper code around the new Eigen functionality is located in PINV. This can be used as-is, requiring compilation and linking of PINV, or can be copied and pasted into your project as appropriate.
+
+### Note
+The Eigen modifications allow for BDCSVD to calculate the relevant pieces of a pseudoinverse computation without heap allocation. PINV provides code that takes these pieces and manipulates them to find the actual pseudoinverse, also without heap allocation.
 
 ## Usage
+```
+#include "PINV.h"
 
-## Tests
+int main() {
+    PINV p; //Initial heap allocation
+
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> input =
+        Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>::Zero(3, 2);
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> output =
+        Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>::Zero(input.cols(), input.rows());
+
+    //fill in input...
+
+    p.bd.input.setZero();
+    p.bd.input.block(0, 0, input.rows(), input.cols()) = input;
+    p.calculate_PINV();
+    output = p->bd.output.block(0, 0, output.rows(), output.cols());
+}
+```
 
 ## Constraints
 The pseudoinverse solver is currently limited to problem sizes of 2500x17 or less. It is not currently templated and is restricted to doubles. Row major is used.
+
+## Tests
 
 ### Licensing
 This open-source code is forked from Eigen 3.3.7: https://gitlab.com/libeigen/eigen/-/releases/3.3.7. For the Eigen MPL2 and other licensing information, see the Eigen directory.
