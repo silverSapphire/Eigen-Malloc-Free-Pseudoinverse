@@ -209,9 +209,6 @@ template<typename _MatrixType> class ColPivHouseholderQR
 
     template<typename InputType>
     ColPivHouseholderQR& compute(const EigenBase<InputType>& matrix);
-    template<typename InputType>
-    ColPivHouseholderQR& compute(const EigenBase<InputType>& matrix,
-            MatrixType* temp);
 
     /** \returns a const reference to the column permutation matrix */
     const PermutationType& colsPermutation() const
@@ -432,7 +429,6 @@ template<typename _MatrixType> class ColPivHouseholderQR
       EIGEN_STATIC_ASSERT_NON_INTEGER(Scalar);
     }
 
-    void computeInPlace(MatrixType* temp);
     void computeInPlace();
 
     MatrixType m_qr;
@@ -473,124 +469,11 @@ typename MatrixType::RealScalar ColPivHouseholderQR<MatrixType>::logAbsDetermina
   */
 template<typename MatrixType>
 template<typename InputType>
-ColPivHouseholderQR<MatrixType>& ColPivHouseholderQR<MatrixType>::compute(const EigenBase<InputType>& matrix,
-        MatrixType* temp)
-{
-  m_qr = matrix.derived();
-  computeInPlace(temp);
-  return *this;
-}
-
-template<typename MatrixType>
-template<typename InputType>
 ColPivHouseholderQR<MatrixType>& ColPivHouseholderQR<MatrixType>::compute(const EigenBase<InputType>& matrix)
 {
   m_qr = matrix.derived();
   computeInPlace();
   return *this;
-}
-
-template<typename MatrixType>
-void ColPivHouseholderQR<MatrixType>::computeInPlace(MatrixType* temp)
-{
-  check_template_parameters();
-
-  // the column permutation is stored as int indices, so just to be sure:
-  eigen_assert(m_qr.cols()<=NumTraits<int>::highest());
-
-  using std::abs;
-
-  Index rows = m_qr.rows();
-  Index cols = m_qr.cols();
-  Index size = m_qr.diagonalSize();
-
-  m_hCoeffs.resize(size);
-
-  m_temp.resize(cols);
-
-  m_colsTranspositions.resize(m_qr.cols());
-  Index number_of_transpositions = 0;
-
-  m_colNormsUpdated.resize(cols);
-  m_colNormsDirect.resize(cols);
-  for (Index k = 0; k < cols; ++k) {
-    // colNormsDirect(k) caches the most recent directly computed norm of
-    // column k.
-    m_colNormsDirect.coeffRef(k) = m_qr.col(k).norm();
-    m_colNormsUpdated.coeffRef(k) = m_colNormsDirect.coeffRef(k);
-  }
-
-  RealScalar threshold_helper =  numext::abs2<RealScalar>(m_colNormsUpdated.maxCoeff() * NumTraits<RealScalar>::epsilon()) / RealScalar(rows);
-  RealScalar norm_downdate_threshold = numext::sqrt(NumTraits<RealScalar>::epsilon());
-
-  m_nonzero_pivots = size; // the generic case is that in which all pivots are nonzero (invertible case)
-  m_maxpivot = RealScalar(0);
-
-  for(Index k = 0; k < size; ++k)
-  {
-    // first, we look up in our table m_colNormsUpdated which column has the biggest norm
-    Index biggest_col_index;
-    RealScalar biggest_col_sq_norm = numext::abs2(m_colNormsUpdated.tail(cols-k).maxCoeff(&biggest_col_index));
-    biggest_col_index += k;
-
-    // Track the number of meaningful pivots but do not stop the decomposition to make
-    // sure that the initial matrix is properly reproduced. See bug 941.
-    if(m_nonzero_pivots==size && biggest_col_sq_norm < threshold_helper * RealScalar(rows-k))
-      m_nonzero_pivots = k;
-
-    // apply the transposition to the columns
-    m_colsTranspositions.coeffRef(k) = biggest_col_index;
-    if(k != biggest_col_index) {
-      m_qr.col(k).swap(m_qr.col(biggest_col_index));
-      std::swap(m_colNormsUpdated.coeffRef(k), m_colNormsUpdated.coeffRef(biggest_col_index));
-      std::swap(m_colNormsDirect.coeffRef(k), m_colNormsDirect.coeffRef(biggest_col_index));
-      ++number_of_transpositions;
-    }
-
-    // generate the householder vector, store it below the diagonal
-    RealScalar beta;
-    m_qr.col(k).tail(rows-k).makeHouseholderInPlace(m_hCoeffs.coeffRef(k), beta);
-
-    // apply the householder transformation to the diagonal coefficient
-    m_qr.coeffRef(k,k) = beta;
-
-    // remember the maximum absolute value of diagonal coefficients
-    if(abs(beta) > m_maxpivot) m_maxpivot = abs(beta);
-
-    // apply the householder transformation
-    m_qr.bottomRightCorner(rows-k, cols-k-1)
-        .applyHouseholderOnTheLeft(m_qr.col(k).tail(rows-k-1), m_hCoeffs.coeffRef(k), &m_temp.coeffRef(k+1), temp);
-
-    // update our table of norms of the columns
-    for (Index j = k + 1; j < cols; ++j) {
-      // The following implements the stable norm downgrade step discussed in
-      // http://www.netlib.org/lapack/lawnspdf/lawn176.pdf
-      // and used in LAPACK routines xGEQPF and xGEQP3.
-      // See lines 278-297 in http://www.netlib.org/lapack/explore-html/dc/df4/sgeqpf_8f_source.html
-      if (m_colNormsUpdated.coeffRef(j) != RealScalar(0)) {
-        RealScalar temp = abs(m_qr.coeffRef(k, j)) / m_colNormsUpdated.coeffRef(j);
-        temp = (RealScalar(1) + temp) * (RealScalar(1) - temp);
-        temp = temp <  RealScalar(0) ? RealScalar(0) : temp;
-        RealScalar temp2 = temp * numext::abs2<RealScalar>(m_colNormsUpdated.coeffRef(j) /
-                                                           m_colNormsDirect.coeffRef(j));
-        if (temp2 <= norm_downdate_threshold) {
-          // The updated norm has become too inaccurate so re-compute the column
-          // norm directly.
-          m_colNormsDirect.coeffRef(j) = m_qr.col(j).tail(rows - k - 1).norm();
-          m_colNormsUpdated.coeffRef(j) = m_colNormsDirect.coeffRef(j);
-        } else {
-          m_colNormsUpdated.coeffRef(j) *= numext::sqrt(temp);
-        }
-      }
-    }
-  }
-
-  m_colsPermutation.setIdentity(PermIndexType(cols));
-  for(PermIndexType k = 0; k < size/*m_nonzero_pivots*/; ++k)
-    m_colsPermutation.applyTranspositionOnTheRight(k, PermIndexType(m_colsTranspositions.coeff(k)));
-
-  m_det_pq = (number_of_transpositions%2) ? -1 : 1;
-  m_isInitialized = true;
 }
 
 template<typename MatrixType>

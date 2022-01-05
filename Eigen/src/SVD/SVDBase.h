@@ -183,7 +183,7 @@ public:
     // this temporary is needed to workaround a MSVC issue
     Index diagSize = (std::max<Index>)(1,m_diagSize);
     return m_usePrescribedThreshold ? m_prescribedThreshold
-                                    : RealScalar(diagSize)*NumTraits<Scalar>::epsilon();
+                                    : diagSize*NumTraits<Scalar>::epsilon();
   }
 
   /** \returns true if \a U (full or thin) is asked for in this SVD decomposition */
@@ -304,9 +304,8 @@ bool SVDBase<MatrixType>::allocate(Index rows, Index cols, unsigned int computat
   m_singularValues.resize(m_diagSize);
   if(RowsAtCompileTime==Dynamic)
     m_matrixU.resize(m_rows, m_computeFullU ? m_rows : m_computeThinU ? m_diagSize : 0);
-  if(ColsAtCompileTime==Dynamic) {
+  if(ColsAtCompileTime==Dynamic)
     m_matrixV.resize(m_cols, m_computeFullV ? m_cols : m_computeThinV ? m_diagSize : 0);
-  }
 
   return false;
 }
