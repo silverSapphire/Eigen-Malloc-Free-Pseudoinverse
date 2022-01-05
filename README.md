@@ -49,7 +49,7 @@ Modified Eigen files include:
 - SVD/JacobiSVD
 - SVD/UpperBidiagonalization
 
-and more. See [this PR](https://github.com/silverSapphire/Eigen/pull/1/files) for the full Eigen diff.
+and more. See [this PR](https://github.com/silverSapphire/Eigen-Malloc-Free-Pseudoinverse/pull/2/files) for the full Eigen diff.
 
 ### Notes
 There are numbers hardcoded into the PINV memory initializations for all of the temporary variables. These were determined by stepping through normal malloc'ing execution of BDCSVD with the original 2500x17 problem size and noting down the allocated sizes. These numbers would likely change if the temporaries were initialized with sizes other than 2500x17. This is also why problem sizes exceeding 2500x17 would likely fail to execute.
