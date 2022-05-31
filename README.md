@@ -3,6 +3,8 @@ This extended Eigen C++ template library and wrapper provides a malloc-free Moor
 
 Standard Eigen pseudoinverse functions, even those with memory preallocation variants, perform heap allocation during execution. This runtime allocation is undesirable in certain cases, particularly in [embedded systems](https://en.wikipedia.org/wiki/The_Power_of_10:_Rules_for_Developing_Safety-Critical_Code). The [BDCSVD class](https://eigen.tuxfamily.org/dox/classEigen_1_1BDCSVD.html) has been extended to allow for up-front allocation of all used memory, with an ensuing malloc-free execution of the decomposition.
 
+The development of this Eigen extension was presented at the Flight Software Workshop, and the talk can be viewed [here](https://www.youtube.com/watch?v=4bzlMmd67WM).
+
 ## Installation
 - The modified Eigen directory can be used or installed exactly as the original Eigen: simply include the headers in your project, and you are good to go! No make required. See [here](https://eigen.tuxfamily.org/dox/GettingStarted.html) for the original Eigen documentation.
 
